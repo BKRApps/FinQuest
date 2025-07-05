@@ -10,6 +10,7 @@ import SwiftUI
 struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var coreDataManager = CoreDataManager.shared
+    @StateObject private var networkService = NetworkService.shared
     @State private var selectedType: TransactionType = .expense
     @State private var selectedDate = Date()
     @State private var selectedCategory = ""
@@ -19,6 +20,7 @@ struct AddTransactionView: View {
     @State private var showingDatePicker = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var isLoading = false
     
     var body: some View {
         NavigationView {
@@ -91,14 +93,20 @@ struct AddTransactionView: View {
                     Button(action: saveTransaction) {
                         HStack {
                             Spacer()
-                            Text("Save Transaction")
-                                .font(.headline)
-                                .foregroundColor(.white)
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("Save Transaction")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                            }
                             Spacer()
                         }
                     }
                     .listRowBackground(Color.blue)
-                    .disabled(selectedCategory.isEmpty || amount.isEmpty)
+                    .disabled(selectedCategory.isEmpty || amount.isEmpty || isLoading)
                 }
             }
             .navigationTitle("Add Transaction")
@@ -108,6 +116,7 @@ struct AddTransactionView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .disabled(isLoading)
                 }
             }
             .alert("Transaction", isPresented: $showingAlert) {
@@ -138,11 +147,25 @@ struct AddTransactionView: View {
             amount: amountValue
         )
         
-        // Save to Core Data
+        isLoading = true
+        
+        // Save to Core Data first
         coreDataManager.addTransaction(transaction)
         
-        alertMessage = "Transaction saved successfully!"
-        showingAlert = true
+        // Then save to API
+        networkService.saveTransaction(transaction) { result in
+            isLoading = false
+            
+            switch result {
+            case .success(let response):
+                alertMessage = "\(response.message) - Transaction saved to local storage and cloud!"
+                showingAlert = true
+                
+            case .failure(let error):
+                alertMessage = "Transaction saved locally. Network error: \(error.localizedDescription)"
+                showingAlert = true
+            }
+        }
     }
 }
 
