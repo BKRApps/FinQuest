@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddTransactionView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var coreDataManager = CoreDataManager.shared
     @State private var selectedType: TransactionType = .expense
     @State private var selectedDate = Date()
     @State private var selectedCategory = ""
@@ -16,6 +17,8 @@ struct AddTransactionView: View {
     @State private var comments = ""
     @State private var amount = ""
     @State private var showingDatePicker = false
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
     
     var body: some View {
         NavigationView {
@@ -68,9 +71,13 @@ struct AddTransactionView: View {
                 }
                 
                 // Amount Section
-                Section("Amount") {
-                    TextField("Enter amount", text: $amount)
-                        .keyboardType(.decimalPad)
+                Section("Amount (₹)") {
+                    HStack {
+                        Text("₹")
+                            .foregroundColor(.secondary)
+                        TextField("0.00", text: $amount)
+                            .keyboardType(.decimalPad)
+                    }
                 }
                 
                 // Comments Section
@@ -103,11 +110,22 @@ struct AddTransactionView: View {
                     }
                 }
             }
+            .alert("Transaction", isPresented: $showingAlert) {
+                Button("OK") {
+                    if alertMessage.contains("saved") {
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text(alertMessage)
+            }
         }
     }
     
     private func saveTransaction() {
         guard let amountValue = Double(amount), !selectedCategory.isEmpty else {
+            alertMessage = "Please fill in all required fields"
+            showingAlert = true
             return
         }
         
@@ -120,10 +138,11 @@ struct AddTransactionView: View {
             amount: amountValue
         )
         
-        // Here you would typically save the transaction to your data store
-        // For now, we'll just print it and dismiss
-        print("Transaction saved: \(transaction)")
-        dismiss()
+        // Save to Core Data
+        coreDataManager.addTransaction(transaction)
+        
+        alertMessage = "Transaction saved successfully!"
+        showingAlert = true
     }
 }
 

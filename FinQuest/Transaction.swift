@@ -10,14 +10,14 @@ import Foundation
 struct Transaction: Identifiable, Codable {
     let id: UUID
     let type: TransactionType
-    var date: Date
-    var category: String
-    var subCategory: String?
-    var comments: String?
-    var amount: Double
+    let date: Date
+    let category: String
+    let subCategory: String?
+    let comments: String?
+    let amount: Double
     
-    init(type: TransactionType, date: Date = Date(), category: String, subCategory: String? = nil, comments: String? = nil, amount: Double) {
-        id = UUID()
+    init(id: UUID = UUID(), type: TransactionType, date: Date = Date(), category: String, subCategory: String? = nil, comments: String? = nil, amount: Double) {
+        self.id = id
         self.type = type
         self.date = date
         self.category = category
